@@ -1,17 +1,11 @@
+## Introduction
 
-3. One random action is chosen from the action set.
-4. The player must perform the correct action before the timer expires.
-5. If the player **succeeds**:
-- The buzzer plays a short success beep.
-- The score increases based on the current level (higher levels give more points).
-- The game advances to the next level with a slightly shorter time limit.
-6. If the player **fails** (wrong move or timeout):
-- A failure tone plays.
-- The OLED shows a “SCORE” screen with a pair of pixel-art characters and the final score.
-- The game checks if the player reached the high score table.
-- A high score screen is shown, and the game waits for a button press to return to the difficulty selection menu.
+LightGrid is a handheld interactive reaction game designed to explore real-time physical input, motion sensing, and embedded game logic using a compact microcontroller platform. Inspired by classic arcade-style reflex games, LightGrid transforms simple hardware components—lights, motion, sound, and a rotary controller—into a fast-paced, skill-based experience.
 
-If the player reaches the maximum level for the chosen difficulty, the game plays a simple “win” melody, shows the final score, updates the high score table if needed, and then returns to difficulty selection after a button press.
+The project was developed using a XIAO ESP32-C3 microcontroller, combining an OLED display, NeoPixel LEDs, an accelerometer, a rotary encoder, and a passive buzzer to create a fully self-contained game system. Players interact with the device through tilting, shaking, twisting, pressing, and light-based challenges, receiving immediate visual and audio feedback for every action.
+
+Beyond gameplay, LightGrid also demonstrates a complete embedded systems workflow, including hardware integration, firmware development in CircuitPython, real-time interaction design, and persistent data storage through an onboard high score system. The project emphasizes hands-on physical computing, responsive user interaction, and the transformation of simple electronic inputs into an engaging digital play experience.
+
 
 ---
 
