@@ -1,170 +1,201 @@
-# LightGrid-Game
-LightGrid-Game
-# LIGHT GRID – Tilt & Twist Reaction Game
+# LightGrid – 90s Style Tilt & Twist Reaction Game
 
 ## Overview
 
-LIGHT GRID is a small handheld reaction game built with a XIAO ESP32-C3, a 9-LED NeoPixel strip (3 segments of 3 LEDs), an accelerometer, an OLED display, a rotary encoder, and a buzzer.
+LightGrid is a handheld 90s-style reaction game built with a XIAO ESP32-C3, a 9-LED NeoPixel light frame, an ADXL345 accelerometer, a 128×64 OLED display, a rotary encoder, and a passive buzzer.
 
-On each level, the device shows a light pattern and asks the player to perform a random action:
-- **Tilt** the whole device
-- **Twist** the rotary knob
-- **Press** the encoder button
-- **Match a color** with the knob
-- **Hit the BONUS button**
+The game challenges players to react quickly to changing instructions such as tilting, twisting, pressing, and interacting with LED lights. Each correct action advances the player to the next level with increasing difficulty. A failure or timeout ends the game and displays the final score.
 
-If the player performs the correct move before the timer runs out, they score a point and go to the next level. If they fail or are too slow, the game ends with a red flash and a “GAME OVER” screen.
+This project focuses on physical interaction, real-time feedback, and embedded game logic design using motion, light, sound, and user input.
 
 ---
 
 ## How the Game Works
 
-### 1. Startup & Main Screen
+### 1. Startup & Title Screen
 
-When powered on, the NeoPixels flash briefly and then turn off.  
-The OLED shows:
+When the device is powered on:
 
+- The NeoPixel LEDs perform a brief startup animation.
+- The OLED displays the game title:
+  
+  BOP-IT  
+  DELUXE  
 
-- The **rotary encoder button (D0)** is the main start button.
-- The buzzer plays a short beep when the game starts.
+- The buzzer plays a short confirmation beep.
+
+---
 
 ### 2. Difficulty Selection
 
-After pressing the encoder button, the game enters a level selection menu:
+The player selects the game difficulty using the rotary encoder:
 
-- Rotate the knob to choose between:
-  - `EASY` – Slow timer (base time = 2.0 s)
-  - `NORMAL` – Medium timer (base time = 1.4 s)
-  - `HARD` – Fast timer (base time = 1.0 s)
+- Rotate the knob to switch between:
+  - EASY – Long reaction time, fewer levels
+  - MEDIUM – Medium reaction time
+  - HARD – Short reaction time, more levels
 
-The current option is shown with a `>` on the OLED:
+- Press the encoder button (D0) to confirm the selection.
 
+The difficulty affects:
+- The base reaction time for each level
+- How fast the time limit shrinks
+- The total number of levels in the game
 
-Press the encoder button again to confirm.  
-The chosen difficulty controls how much time the player has for each action. The time window gets slightly shorter on higher levels.
+---
 
-### 3. LED Patterns & Colors
+### 3. Game Loop Logic
 
-The 9 NeoPixel LEDs are grouped into “zones” and patterns in the code:
+Each level follows this sequence:
 
-- `ZONE1`, `ZONE2`, `ZONE3`, `ZONE4` and some diagonal patterns.
-- A random pattern is chosen every level.
-- A random color is also chosen from a list of preset RGB colors.
+1. The LEDs change color based on the level.
+2. The OLED shows:
+   
+   LEVEL X  
+   MOVE: <ACTION>  
+   TIME: <seconds>  
 
-Flow of each level:
+3. A random action is selected.
+4. The player must perform the correct motion before the timer expires.
+5. If successful:
+   - The buzzer beeps
+   - The score increases
+   - The game advances to the next level
+6. If failed:
+   - The score is displayed with pixel characters
+   - A long failure tone plays
+   - The game waits for restart
 
-1. The OLED shows: `LEVEL N` / `MEMORIZE`
-2. The LEDs light up in that pattern and color for 1 second.
-3. The LEDs turn off.
-4. The OLED shows the required **action**, for example:
+---
 
+## Player Actions
 
-5. The buzzer beeps once to indicate that the timer has started.
+Each level randomly selects one of the following actions:
 
-### 4. Actions (Game Inputs)
+### TILT
+Uses the ADXL345 accelerometer.  
+Success condition: the device is tilted strongly on the X or Y axis.
 
-Each level randomly chooses one of the following actions:
+### SHAKE
+Uses total acceleration magnitude.  
+Success condition: a quick shaking motion is detected.
 
-- `TILT` – Read from the **ADXL345 accelerometer** (on I2C D8/D9).  
-- If the device is tilted far enough on X or Y (>|5 m/s²|), the move succeeds.
+### TWIST
+Uses the rotary encoder rotation (D1/D2).  
+Success condition: the knob is rotated several steps.
 
-- `TWIST` – Use the **rotary encoder A/B signals (D1/D2)**.  
-- If the knob is rotated by at least 2 encoder steps, the move succeeds.
+### PRESS
+Uses the encoder push button (D0).  
+Success condition: the button is pressed within the time limit.
 
-- `PRESS` – Use the **encoder push button (D0)**.  
-- If the button is pressed before the timer runs out, the move succeeds.
+### LIGHT_POS
+One LED is lit.  
+The player rotates the encoder to move the light to the target position.
 
-- `COLOR` – Use the encoder to cycle through colors.  
-- Turning the knob changes the LED color.
-- When the displayed color matches the original target color, the move succeeds.
+### LIGHT_COLOR
+The system displays a random color.  
+The OLED asks:
+  
+IS THIS <COLOR>?  
+PRESS = YES  
 
-- `BONUS` – Use the **separate BONUS push button (D4)**.  
-- Pressing this button gives an **extra score point** and completes the level.
+The player confirms by pressing the button.
 
-If the action is detected in time:
+Infrared (IR) sensors are NOT used in this version of the game.
 
-- NeoPixels flash green quickly.
-- The buzzer beeps.
-- `score += 1` and the game goes to the next level.
+---
 
-If the player fails or times out:
+## Visual & Audio Feedback
 
-- NeoPixels flash red several times.
-- A long “fail” sound plays.
-- The OLED shows:
+NeoPixel LEDs (9 total) provide:
+- Startup animation
+- Level color feedback
+- Success flashes
+- Failure flashes
 
+OLED Display provides:
+- Title screen
+- Difficulty menu
+- Action prompts
+- Score display
 
-- All LEDs turn blue.
-- The buzzer plays a small “victory” pattern.
-
-Then the device returns to the main screen.
+Passive Buzzer (D6) provides:
+- Start beep
+- Success beep
+- Failure tone
+- Win sequence
 
 ---
 
 ## Controls & Hardware Mapping
 
-- **XIAO ESP32-C3**
-- Drives all logic and animations.
-- Handles NeoPixel timing, input reading, and game state.
+XIAO ESP32-C3  
+Main microcontroller for all logic and input processing.
 
-- **SSD1306 128x64 OLED (I2C SCL=D9, SDA=D8)**
-- Shows game title, menu, level number, and current required action.
-- Displays score on game over / win.
+SSD1306 OLED Display (I2C)  
+SDA = D8  
+SCL = D9  
 
-- **ADXL345 Accelerometer (I2C SCL=D9, SDA=D8)**
-- Provides tilt detection for the `TILT` action.
+ADXL345 Accelerometer (I2C)  
+SDA = D8  
+SCL = D9  
 
-- **Rotary Encoder with Push Button**
-- **A/B → D1/D2**: rotation for `TWIST` and color selection in `COLOR`.
-- **SW → D0**: main confirm / start button and `PRESS` action.
+NeoPixel LEDs (9 total)  
+Data Pin = D3  
 
-- **BONUS Button (D4)**
-- A separate push button used for the special `BONUS` action.
-- Gives an extra point when pressed in time.
+Rotary Encoder  
+A/B Pins = D1 / D2  
+Push Button = D0  
 
-- **NeoPixel LEDs (9 total, chained)**
-- Visual feedback for patterns, colors, success (green flash) and failure (red flash).
-- First DIN is driven from **D3** (with a series resistor).
+Passive Buzzer  
+Signal Pin = D6  
 
-- **Buzzer (D6)**
-- Simple audio feedback:
-  - Short beeps for start/OK.
-  - Long tone for failure.
-  - Repeated beeps for win.
-
-- **Battery & Power Switch**
-- External battery pack connected to the XIAO 5V pin through a small slide switch.
-- Allows the device to be turned on/off without unplugging the battery.
-- All grounds are shared.
+Battery & Power Switch  
+5V + GND with in-line slide switch  
+All grounds are shared.
 
 ---
 
-## Enclosure Design Thoughts
+## Enclosure Design Concept
 
-The enclosure is designed as a small handheld “90s-style” game device:
+The enclosure is designed as a compact handheld 90s-style toy console.
 
-- The **OLED** is placed near the top so text is easy to read while holding the device.
-- The **9 NeoPixel LEDs** are arranged together as a “light grid”, making patterns and colors clearly visible.
-- The **rotary encoder** is placed on the side or lower front, so the player can twist and press it with one hand.
-- The **BONUS button** is positioned away from the encoder, creating a separate, special action that feels distinct.
-- The **buzzer** is inside the case, with a small sound hole so feedback is audible but not too loud.
-- The **battery and slide power switch** are on the back or side, making it easy to power the device on/off and replace the battery.
+- The OLED screen is centered near the top for readability.
+- The NeoPixel lights form a glowing frame around the front panel.
+- The rotary encoder is placed on the side for natural thumb control.
+- The main button is placed on the front for fast reaction input.
+- The buzzer is mounted inside the enclosure with a small sound vent.
+- The battery and power switch are located on the back for portability.
 
-The overall goal of the enclosure is to:
-- Encourage active interaction (tilting, twisting, pressing).
-- Make the mapping from actions → hardware very clear.
-- Keep the form factor compact so it feels like a small toy/game console you can hold and shake.
+The enclosure emphasizes:
+- Clear mapping between action and control
+- Strong visual feedback
+- One-hand operation
+- A retro arcade look and feel
 
 ---
 
 ## Repository Structure
 
-```text
 .
-├── README.md              # Project overview and game description
+├── README.md                    # Project description and documentation
 ├── src/
-│   └── light_grid_game.py # Main game code (this file)
+│   └── main.py                  # Final game code
 └── Documentation/
-  ├── final_project.kicad_sch  # Circuit diagram (KiCad schematic)
-  ├── system_block_diagram.png # System block diagram
-  └── enclosure_sketches.png   # Enclosure concept images (optional)
+    ├── final_project.kicad_sch        # Circuit diagram (KiCad)
+    ├── system_block_diagram.png      # System block diagram
+    └── enclosure_sketches.png        # Enclosure design sketches
+
+---
+
+## Summary
+
+LightGrid combines:
+
+- Motion sensing
+- LED-based visual feedback
+- Embedded sound effects
+- Real-time reaction gameplay
+- Physical user interaction
+
+This project demonstrates a complete embedded system pipeline including hardware design, firmware programming, user interface feedback, and enclosure design.
