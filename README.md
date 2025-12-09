@@ -1,10 +1,98 @@
 ## Introduction
 
-LightGrid is a handheld interactive reaction game designed to explore real-time physical input, motion sensing, and embedded game logic using a compact microcontroller platform. Inspired by classic arcade-style reflex games, LightGrid transforms simple hardware components—lights, motion, sound, and a rotary controller—into a fast-paced, skill-based experience.
+LightGrid is a handheld interactive reaction game designed to explore real-time physical interaction, motion sensing, and embedded game logic using a compact microcontroller platform. Inspired by classic arcade-style reflex games such as Bop-It, LightGrid transforms simple hardware components—lights, motion, sound, and mechanical input—into a fast-paced, skill-based interactive experience.
 
-The project was developed using a XIAO ESP32-C3 microcontroller, combining an OLED display, NeoPixel LEDs, an accelerometer, a rotary encoder, and a passive buzzer to create a fully self-contained game system. Players interact with the device through tilting, shaking, twisting, pressing, and light-based challenges, receiving immediate visual and audio feedback for every action.
+The project is built around the XIAO ESP32-C3 microcontroller and integrates multiple input and output modalities, including an OLED display for instruction feedback, NeoPixel LEDs for visual cues, an accelerometer for motion detection, a rotary encoder for control input, and a passive buzzer for audio feedback. Players interact with the device through tilting, shaking, twisting, pressing, and light-based challenges, receiving immediate feedback for every action.
 
-Beyond gameplay, LightGrid also demonstrates a complete embedded systems workflow, including hardware integration, firmware development in CircuitPython, real-time interaction design, and persistent data storage through an onboard high score system. The project emphasizes hands-on physical computing, responsive user interaction, and the transformation of simple electronic inputs into an engaging digital play experience.
+Beyond gameplay, LightGrid represents a complete embedded systems workflow, encompassing hardware integration, CircuitPython firmware development, real-time interaction design, and non-volatile data storage through an onboard high score system. The project emphasizes physical computing, responsive control design, and the translation of simple electronic inputs into an engaging digital play experience.
+
+---
+
+## Overview
+
+LightGrid is a handheld reaction game built with a XIAO ESP32-C3, a 9-LED NeoPixel light frame, an ADXL345 accelerometer, a 128×64 OLED display, a rotary encoder, and a passive buzzer.
+
+The game challenges players to react quickly to changing instructions such as tilting, shaking, twisting, pressing, and interacting with LED-based tasks. Each correct action advances the player to the next level, while the reaction time becomes progressively shorter as difficulty increases. A failure—either through an incorrect action or a timeout—ends the run and displays the final score.
+
+LightGrid combines physical motion, visual prompts, and sound feedback to create a tightly coupled interaction loop between the player and the device. The design focuses on real-time responsiveness, intuitive physical control, and clear multimodal feedback using motion, light, sound, and on-screen prompts.
+
+---
+
+## How the Game Works
+
+LightGrid operates as a level-based reaction game with an increasing difficulty curve. The game flow consists of four main stages: startup, difficulty selection, core gameplay loop, and end-of-game feedback.
+
+### 1. Startup & Title Screen
+
+When the device is powered on:
+
+- The NeoPixel LEDs perform a smooth green startup animation.
+- The OLED displays the game title:
+
+  BOP-IT  
+  DELUXE  
+
+- The buzzer plays a short confirmation beep to indicate that the system is ready.
+
+This startup sequence establishes visual, auditory, and system readiness feedback for the player.
+
+---
+
+### 2. Difficulty Selection
+
+The player selects the game difficulty using the rotary encoder:
+
+- Rotate the knob to switch between:
+  - EASY – Longer reaction time and fewer levels  
+  - MEDIUM – Moderate reaction time and level count  
+  - HARD – Short reaction time and the highest number of levels  
+
+- Press the encoder button (D0) to confirm the selected difficulty.
+
+The chosen difficulty directly affects:
+- The base reaction time for each level  
+- The rate at which the time limit shrinks  
+- The total number of levels required to complete the game  
+
+This selection stage allows players to choose an appropriate challenge level before entering gameplay.
+
+---
+
+### 3. Core Gameplay Loop
+
+After difficulty selection, the game enters the main gameplay loop. Each level follows the same structured sequence:
+
+1. The NeoPixel LEDs change color based on the current level.
+2. The OLED displays the current game state:
+
+   LEVEL X  
+   MOVE: <ACTION>  
+   TIME: <seconds>  
+
+3. One random action is selected from the action set.
+4. The player must perform the correct physical interaction before the timer expires.
+5. If the player succeeds:
+   - The buzzer plays a short success tone  
+   - The score increases based on the current level  
+   - The game advances to the next level with a shorter reaction window  
+6. If the player fails:
+   - A failure tone plays  
+   - The OLED displays the final score  
+   - The game checks and updates the high score table  
+   - The player is returned to the difficulty selection screen after confirmation  
+
+This loop forms the core real-time interaction pipeline of LightGrid, tightly coupling sensing, timing, feedback, and player response.
+
+---
+
+### 4. End-of-Game Outcomes
+
+LightGrid supports two end states:
+
+- **Game Over:** Triggered when the player fails an action or runs out of time. The final score is displayed and evaluated for high score entry.
+- **Victory (You Win):** Triggered when the player successfully completes all levels for the selected difficulty. A win sound sequence plays, followed by score display and high score evaluation.
+
+In both cases, the game transitions to the high score system before allowing the player to restart.
 
 
 ---
