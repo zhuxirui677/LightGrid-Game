@@ -1,9 +1,15 @@
 # ============================================================
-# FINAL PROJECT – HANDHELD GAME (STABLE FINAL BUILD)
+# FINAL PROJECT – HANDHELD REACTION GAME (STABLE FINAL BUILD)
 # LightGrid – Tilt & Twist Reaction Game
 # Xiao ESP32-C3 + CircuitPython
-# 6 NeoPixels ONLY (0–5)
-# Smooth 2.5s Startup + Difficulty + High Score + Initials
+# WITH:
+# - Smooth 2.5s Startup Animation
+# - Difficulty Select
+# - 6 Game Actions
+# - High Score System (NVM)
+# - 3-Letter Initials Input
+# - LIGHT_POS uses ONLY first 6 LEDs
+# - Accelerometer Moving-Average Filter (Noise Reduction)
 # ============================================================
 
 import time, random
@@ -11,7 +17,7 @@ import board, busio, digitalio, neopixel, pwmio, microcontroller
 import adafruit_ssd1306
 import adafruit_adxl34x
 
-# ================= FULL OLED FONT =================
+# ================= OLED FONT =================
 
 mini_font = {
 "A":[0x7C,0x12,0x11,0x12,0x7C],"B":[0x7F,0x49,0x49,0x49,0x36],
@@ -22,11 +28,10 @@ mini_font = {
 "K":[0x7F,0x08,0x1C,0x22,0x41],"L":[0x7F,0x40,0x40,0x40,0x40],
 "M":[0x7F,0x02,0x1C,0x02,0x7F],"N":[0x7F,0x04,0x08,0x10,0x7F],
 "O":[0x3E,0x41,0x41,0x41,0x3E],"P":[0x7F,0x09,0x09,0x09,0x06],
-"Q":[0x3E,0x41,0x51,0x21,0x5E],"R":[0x7F,0x09,0x19,0x29,0x46],
-"S":[0x26,0x49,0x49,0x49,0x32],"T":[0x01,0x01,0x7F,0x01,0x01],
-"U":[0x3F,0x40,0x40,0x40,0x3F],"V":[0x3F,0x40,0x40,0x20,0x1F],
-"W":[0x7F,0x20,0x18,0x20,0x7F],"X":[0x63,0x14,0x08,0x14,0x63],
-"Y":[0x03,0x04,0x78,0x04,0x03],"Z":[0x61,0x51,0x49,0x45,0x43],
+"R":[0x7F,0x09,0x19,0x29,0x46],"S":[0x26,0x49,0x49,0x49,0x32],
+"T":[0x01,0x01,0x7F,0x01,0x01],"U":[0x3F,0x40,0x40,0x40,0x3F],
+"V":[0x3F,0x40,0x40,0x20,0x1F],"W":[0x7F,0x20,0x18,0x20,0x7F],
+"X":[0x63,0x14,0x08,0x14,0x63],"Y":[0x03,0x04,0x78,0x04,0x03],
 "0":[0x3E,0x51,0x49,0x45,0x3E],"1":[0x42,0x7F,0x40,0x00,0x00],
 "2":[0x62,0x51,0x49,0x49,0x46],"3":[0x22,0x41,0x49,0x49,0x36],
 " ":[0,0,0,0,0],":":[0x00,0x36,0x36,0x00,0x00]
@@ -37,8 +42,8 @@ def draw_char(d, ch, x, y):
     bits = mini_font[ch]
     for col in range(5):
         for row in range(7):
-            if (bits[col] >> row) & 1:
-                d.pixel(x+col, y+row, 1)
+            if(bits[col]>>row)&1:
+                d.pixel(x+col,y+row,1)
 
 def draw_text(d, t, x, y):
     for i,ch in enumerate(t):
@@ -51,16 +56,14 @@ def show_text(a="",b="",c=""):
     draw_text(oled,c,0,44)
     oled.show()
 
-# ================= HARDWARE =================
+# ================= HARDWARE INIT =================
 
 i2c = busio.I2C(board.D9, board.D8)
 oled = adafruit_ssd1306.SSD1306_I2C(128,64,i2c)
 oled.rotation=2
-
 accel = adafruit_adxl34x.ADXL345(i2c)
 
-NUM_PIXELS = 6   
-pixels = neopixel.NeoPixel(board.D3, NUM_PIXELS, brightness=0.3, auto_write=False)
+pixels = neopixel.NeoPixel(board.D3,9,brightness=0.25,auto_write=False)
 
 btn=digitalio.DigitalInOut(board.D0); btn.switch_to_input(pull=digitalio.Pull.UP)
 clk=digitalio.DigitalInOut(board.D1); clk.switch_to_input(pull=digitalio.Pull.UP)
@@ -83,18 +86,31 @@ def beep(ms=120,f=2000):
     except:
         pass
 
-# ================= 2.5s STARTUP =================
+# ================= ACCEL FILTER (MOVING AVERAGE) =================
+
+def filtered_accel(samples=6):
+    sx = sy = sz = 0
+    for _ in range(samples):
+        x, y, z = accel.acceleration
+        sx += x
+        sy += y
+        sz += z
+        time.sleep(0.002)
+    return sx/samples, sy/samples, sz/samples
+
+# ================= SMOOTH STARTUP =================
 
 def startup_pixels():
     leds_off()
-    for i in range(25):
-        v = int((i/25)*120)
+    steps = 25
+    for i in range(steps):
+        v = int((i/steps)*120)
         pixels.fill((0,v,0))
         pixels.show()
         time.sleep(0.05)
     time.sleep(0.3)
-    for i in range(25,-1,-1):
-        v = int((i/25)*120)
+    for i in range(steps, -1, -1):
+        v = int((i/steps)*120)
         pixels.fill((0,v,0))
         pixels.show()
         time.sleep(0.04)
@@ -103,34 +119,30 @@ def startup_pixels():
 # ================= ENCODER =================
 
 def read_encoder():
-    global last_clk, enc_pos
-    c = clk.value
+    global last_clk,enc_pos
+    c=clk.value
     if last_clk and not c:
-        if dt.value != c:
-            enc_pos += 1
-        else:
-            enc_pos -= 1
-    last_clk = c
+        enc_pos += 1 if dt.value!=c else -1
+    last_clk=c
 
 def get_enc_delta():
     global enc_pos
-    d = enc_pos
-    enc_pos = 0
+    d=enc_pos
+    enc_pos=0
     return d
 
 def button_pressed():
     global last_btn
-    c = btn.value
-    pressed = False
+    c=btn.value
     if last_btn and not c:
         time.sleep(0.01)
         if not btn.value:
-            pressed = True
-    last_btn = c
-    return pressed
+            last_btn=c
+            return True
+    last_btn=c
+    return False
 
-
-# ================= HIGH SCORE =================
+# ================= HIGH SCORE SYSTEM =================
 
 SCORE_ADDR=0
 NAME_ADDR=16
@@ -200,33 +212,38 @@ def wait_press(t):
     s=time.monotonic()
     while time.monotonic()-s<t:
         if button_pressed(): return True
+        time.sleep(0.01)
     return False
 
 def wait_twist(t):
-    s=time.monotonic(); tot=0
+    s=time.monotonic()
+    tot=0
     while time.monotonic()-s<t:
         read_encoder()
         tot+=abs(get_enc_delta())
         if tot>2: return True
+        time.sleep(0.01)
     return False
 
 def wait_tilt(t):
     s=time.monotonic()
     while time.monotonic()-s<t:
-        x,y,_=accel.acceleration
+        x,y,_ = filtered_accel()
         if abs(x)>3 or abs(y)>3: return True
+        time.sleep(0.01)
     return False
 
 def wait_shake(t):
     s=time.monotonic()
     while time.monotonic()-s<t:
-        x,y,z=accel.acceleration
+        x,y,z = filtered_accel()
         if (x*x+y*y+z*z)**0.5>8: return True
+        time.sleep(0.01)
     return False
 
 def wait_light_pos(t):
-    tgt=random.randint(0,NUM_PIXELS-1)
-    pos=random.randint(0,NUM_PIXELS-1)
+    tgt=random.randint(0,5)
+    pos=random.randint(0,5)
     s=time.monotonic()
     while time.monotonic()-s<t:
         leds_off()
@@ -234,20 +251,23 @@ def wait_light_pos(t):
         pixels.show()
         show_text("LIGHT POS","TARGET:"+str(tgt),"")
         read_encoder()
-        pos=(pos+get_enc_delta())%NUM_PIXELS
+        pos=(pos+get_enc_delta())%6
         if pos==tgt: return True
+        time.sleep(0.05)
     return False
 
 def wait_light_color(t):
     colors={"RED":(255,0,0),"GREEN":(0,255,0),
             "BLUE":(0,0,255),"YELLOW":(255,255,0)}
     k=random.choice(list(colors))
-    pixels.fill(colors[k])
+    for i in range(6):
+        pixels[i]=colors[k]
     pixels.show()
     s=time.monotonic()
     while time.monotonic()-s<t:
         show_text("LIGHT COLOR","IS THIS "+k+"?","PRESS = YES")
         if button_pressed(): return True
+        time.sleep(0.01)
     return False
 
 ACTIONS=["PRESS","TWIST","TILT","SHAKE","LIGHT_POS","LIGHT_COLOR"]
@@ -267,8 +287,8 @@ def draw_cute(x,y):
     for dx in [1,2,3]:
         oled.pixel(x+dx,y,1)
         oled.pixel(x+dx,y+4,1)
-    for p in [(0,1),(4,1),(0,3),(4,3),
-              (1,2),(3,2),(2,5),(2,6),(1,7),(3,7)]:
+    for p in [(0,1),(4,1),(0,3),(4,3),(1,2),(3,2),
+              (2,5),(2,6),(1,7),(3,7)]:
         oled.pixel(x+p[0],y+p[1],1)
 
 def show_score(s):
@@ -280,7 +300,7 @@ def show_score(s):
     draw_cute(108,18)
     oled.show()
 
-# ================= MAIN =================
+# ================= MAIN LOOP =================
 
 DIFF=[("EASY",5,8),("MEDIUM",4,10),("HARD",3.2,12)]
 
@@ -309,11 +329,12 @@ while True:
 
     while level<=lvlmax and not over:
         limit=max(1.5,tmax*(0.92**level))
-        pixels.fill(((level*30)%255,80,80))
+        pixels.fill(((level*25)%255,80,80))
         pixels.show()
 
         a=random.choice(ACTIONS)
-        show_text("LEVEL "+str(level),"MOVE:"+a,"TIME:"+str(round(limit,1)))
+        show_text("LEVEL "+str(level),"MOVE:"+a,
+                  "TIME:"+str(round(limit,1)))
 
         if run_action(a,limit):
             beep(120,1900)
@@ -339,5 +360,3 @@ while True:
         show_high_scores(s)
         while not button_pressed():
             time.sleep(0.05)
-
-
