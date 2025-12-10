@@ -16,6 +16,8 @@ The game challenges players to react quickly to changing instructions such as ti
 
 LightGrid combines physical motion, visual prompts, and sound feedback to create a tightly coupled interaction loop between the player and the device. The design focuses on real-time responsiveness, intuitive physical control, and clear multimodal feedback using motion, light, sound, and on-screen prompts.
 
+#### The shell pf the game desgin concept and idea is in documentation file
+
 ---
 
 ## How the Game Works
