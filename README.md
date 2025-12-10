@@ -95,6 +95,9 @@ LightGrid supports two end states:
 In both cases, the game transitions to the high score system before allowing the player to restart.
 
 
+To improve the stability of motion detection and reduce noise from the accelerometer, a software-based moving average low-pass filter is applied to the raw sensor readings before threshold comparison.
+
+
 ---
 
 ## Player Actions
